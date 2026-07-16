@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <DisplaySizeFactor>4</DisplaySizeFactor>
+  <NumberOfRecentConnectionsToDisplay>10</NumberOfRecentConnectionsToDisplay>
+  <ShowMostRecentConnections>false</ShowMostRecentConnections>
+  <ShowSearchBarInCompactSelector>false</ShowSearchBarInCompactSelector>
+  <UseDetailsViewForConnectionManager>false</UseDetailsViewForConnectionManager>
+  <UseDetailsViewForConnectionSelector>false</UseDetailsViewForConnectionSelector>
+  <UseFilterForAdditionalConnection>true</UseFilterForAdditionalConnection>
+</Settings>
