@@ -26,6 +26,11 @@ namespace PAMonitor.XrmToolBox.Models
         public TimeSpan? Duration { get; set; }
         /// <summary>name del run padre (string), no GUID.</summary>
         public string ParentRunName { get; set; }
+        /// <summary>Run id del caller (alternativa/complemento a parentrunid).</summary>
+        public string CallingProductRunId { get; set; }
+        public string CallingProductResourceId { get; set; }
+        /// <summary>Agrupa todas las ejecuciones de una misma cadena padre→hijos.</summary>
+        public string ClientTrackingId { get; set; }
         public string ErrorCode { get; set; }
         public string ErrorMessage { get; set; }
         public string TriggerType { get; set; }

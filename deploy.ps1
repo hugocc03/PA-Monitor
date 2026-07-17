@@ -23,6 +23,21 @@ function Find-XrmToolBoxExe {
         if (Test-Path $path) { return $path }
     }
 
+    try {
+        $dotnet = Get-DotNetExe
+        $locals = & $dotnet nuget locals global-packages -l 2>$null
+        if ($locals -match 'global-packages:\s*(.+)') {
+            $nugetRoot = $Matches[1].Trim()
+            $fromNuget = Get-ChildItem (Join-Path $nugetRoot "xrmtoolboxpackage") -Filter "XrmToolBox.exe" -Recurse -ErrorAction SilentlyContinue |
+                Sort-Object FullName -Descending |
+                Select-Object -First 1
+            if ($fromNuget) { return $fromNuget.FullName }
+        }
+    }
+    catch {
+        # Ignore and continue with shortcut search.
+    }
+
     $shortcut = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu" -Filter "XrmToolBox*.lnk" -Recurse -ErrorAction SilentlyContinue |
         Select-Object -First 1
     if ($shortcut) {
