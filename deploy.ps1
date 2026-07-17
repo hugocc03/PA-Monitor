@@ -1,3 +1,8 @@
+param(
+    [switch]$Launch,
+    [string]$XrmToolBoxExe
+)
+
 $ErrorActionPreference = "Stop"
 
 $project = Join-Path $PSScriptRoot "src\PAMonitor.XrmToolBox\PAMonitor.XrmToolBox.csproj"
@@ -13,6 +18,14 @@ function Get-DotNetExe {
 }
 
 function Find-XrmToolBoxExe {
+    if (-not [string]::IsNullOrWhiteSpace($XrmToolBoxExe) -and (Test-Path $XrmToolBoxExe)) {
+        return $XrmToolBoxExe
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:XRMTOOLBOX_EXE) -and (Test-Path $env:XRMTOOLBOX_EXE)) {
+        return $env:XRMTOOLBOX_EXE
+    }
+
     $candidates = @(
         (Join-Path $env:LOCALAPPDATA "XrmToolBox\XrmToolBox.exe"),
         (Join-Path $env:APPDATA "MscrmTools\XrmToolBox\XrmToolBox.exe"),
@@ -21,29 +34,6 @@ function Find-XrmToolBoxExe {
 
     foreach ($path in $candidates) {
         if (Test-Path $path) { return $path }
-    }
-
-    try {
-        $dotnet = Get-DotNetExe
-        $locals = & $dotnet nuget locals global-packages -l 2>$null
-        if ($locals -match 'global-packages:\s*(.+)') {
-            $nugetRoot = $Matches[1].Trim()
-            $fromNuget = Get-ChildItem (Join-Path $nugetRoot "xrmtoolboxpackage") -Filter "XrmToolBox.exe" -Recurse -ErrorAction SilentlyContinue |
-                Sort-Object FullName -Descending |
-                Select-Object -First 1
-            if ($fromNuget) { return $fromNuget.FullName }
-        }
-    }
-    catch {
-        # Ignore and continue with shortcut search.
-    }
-
-    $shortcut = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu" -Filter "XrmToolBox*.lnk" -Recurse -ErrorAction SilentlyContinue |
-        Select-Object -First 1
-    if ($shortcut) {
-        $shell = New-Object -ComObject WScript.Shell
-        $target = $shell.CreateShortcut($shortcut.FullName).TargetPath
-        if ($target -and (Test-Path $target)) { return $target }
     }
 
     return $null
@@ -61,10 +51,14 @@ if ($LASTEXITCODE -ne 0) {
 $pluginsPath = Join-Path $env:APPDATA "MscrmTools\XrmToolBox\Plugins"
 Write-Host "Plugin deployed to: $pluginsPath"
 
-$xrmToolBoxExe = Find-XrmToolBoxExe
-if ($xrmToolBoxExe) {
-    Start-Process $xrmToolBoxExe
-    Write-Host "XrmToolBox opened: $xrmToolBoxExe"
+if ($Launch) {
+    $exe = Find-XrmToolBoxExe
+    if ($exe) {
+        Start-Process $exe
+        Write-Host "XrmToolBox opened: $exe"
+    } else {
+        Write-Host "XrmToolBox.exe not found. Set -XrmToolBoxExe or env XRMTOOLBOX_EXE, then use -Launch."
+    }
 } else {
-    Write-Host "XrmToolBox.exe not found automatically. Open XrmToolBox manually to load PA Run Monitor."
+    Write-Host "Build done. Reopen XrmToolBox yourself (or run with -Launch)."
 }

@@ -50,6 +50,28 @@ namespace PAMonitor.XrmToolBox.Models
         public DateTime? EndTime { get; set; }
     }
 
+    /// <summary>Nested run tree payload for clipboard JSON export.</summary>
+    public sealed class FlowRunTreeJsonNode
+    {
+        public Guid RunId { get; set; }
+        public string RunName { get; set; }
+        public string FlowName { get; set; }
+        public Guid WorkflowId { get; set; }
+        public string Status { get; set; }
+        public DateTime? StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public double? DurationMs { get; set; }
+        public string ParentRunName { get; set; }
+        public string CallingProductRunId { get; set; }
+        public string ClientTrackingId { get; set; }
+        public string ErrorCode { get; set; }
+        public string ErrorMessage { get; set; }
+        public string TriggerType { get; set; }
+        public int? IsPrimary { get; set; }
+        public string ResourceId { get; set; }
+        public List<FlowRunTreeJsonNode> Children { get; set; } = new List<FlowRunTreeJsonNode>();
+    }
+
     public sealed class FlowRunFilter
     {
         public Guid[] WorkflowIds { get; set; } = Array.Empty<Guid>();

@@ -221,6 +221,60 @@ namespace PAMonitor.XrmToolBox.Services
             return SortRuns(RetrieveAll(query).Select(MapRun)).ToList();
         }
 
+        /// <summary>
+        /// Recursively collects the root run and all descendant child runs.
+        /// </summary>
+        public IReadOnlyList<FlowRunInfo> CollectTreeRuns(FlowRunInfo root)
+        {
+            if (root == null)
+            {
+                return Array.Empty<FlowRunInfo>();
+            }
+
+            if (!string.IsNullOrWhiteSpace(root.ClientTrackingId))
+            {
+                var byTracking = GetRunsByClientTrackingId(root.ClientTrackingId);
+                if (byTracking.Count > 0)
+                {
+                    return byTracking;
+                }
+            }
+
+            var collected = new Dictionary<Guid, FlowRunInfo>();
+            if (root.RunId != Guid.Empty)
+            {
+                collected[root.RunId] = root;
+            }
+
+            var queue = new Queue<FlowRunInfo>();
+            queue.Enqueue(root);
+
+            while (queue.Count > 0)
+            {
+                var parent = queue.Dequeue();
+                foreach (var child in GetChildRuns(parent))
+                {
+                    if (child.RunId == Guid.Empty || collected.ContainsKey(child.RunId))
+                    {
+                        continue;
+                    }
+
+                    collected[child.RunId] = child;
+                    queue.Enqueue(child);
+                }
+            }
+
+            if (root.RunId == Guid.Empty)
+            {
+                return new[] { root }.Concat(collected.Values).ToList();
+            }
+
+            return collected.Values
+                .OrderBy(r => r.StartTime ?? DateTime.MaxValue)
+                .ThenBy(r => r.FlowName ?? r.RunName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
         private static IEnumerable<FlowRunInfo> SortRuns(IEnumerable<FlowRunInfo> runs)
         {
             return runs

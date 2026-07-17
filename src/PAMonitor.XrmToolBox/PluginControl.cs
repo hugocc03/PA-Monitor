@@ -28,6 +28,7 @@ namespace PAMonitor.XrmToolBox
         private readonly List<FlowRunInfo> _currentRuns = new List<FlowRunInfo>();
         private readonly List<SolutionDefinition> _allSolutions = new List<SolutionDefinition>();
         private IReadOnlyList<FlowRunInfo> _treeRelatedRuns = Array.Empty<FlowRunInfo>();
+        private FlowRunInfo _treeRootRun;
         private int _treeLoadVersion;
 
         private ToolStrip _toolStrip;
@@ -35,6 +36,7 @@ namespace PAMonitor.XrmToolBox
         private ToolStripButton _btnLoadFlows;
         private ToolStripButton _btnSearch;
         private ToolStripButton _btnExpandFailed;
+        private ToolStripButton _btnCopyTreeJson;
         private ToolStripButton _btnOpenRun;
         private ToolStripButton _btnFlowApiSettings;
         private Timer _debounceSolutions;
@@ -119,6 +121,13 @@ namespace PAMonitor.XrmToolBox
                 ImageScaling = ToolStripItemImageScaling.None,
                 ToolTipText = "In the run tree, expand nodes marked Failed so you can quickly see which child flow failed."
             };
+            _btnCopyTreeJson = new ToolStripButton("Copy tree JSON")
+            {
+                Image = ToolbarIcons.CopyTreeJson,
+                DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
+                ImageScaling = ToolStripItemImageScaling.None,
+                ToolTipText = "Copy the full nested run tree of the selected execution as JSON."
+            };
             _btnOpenRun = new ToolStripButton("Open run")
             {
                 Image = ToolbarIcons.OpenRun,
@@ -137,6 +146,7 @@ namespace PAMonitor.XrmToolBox
             _btnLoadFlows.Click += (_, __) => ExecuteMethod(() => LoadFlows(requireSelectedSolutions: false));
             _btnSearch.Click += (_, __) => ExecuteMethod(() => SearchRuns(requireSelectedFlows: false));
             _btnExpandFailed.Click += (_, __) => ExpandFailedNodes();
+            _btnCopyTreeJson.Click += (_, __) => CopySelectedRunTreeJson();
             _btnOpenRun.Click += (_, __) => OpenSelectedRunInBrowser();
             _btnFlowApiSettings.Click += (_, __) => OpenFlowApiSettings();
             _toolStrip.Items.AddRange(new ToolStripItem[]
@@ -146,6 +156,7 @@ namespace PAMonitor.XrmToolBox
                 new ToolStripSeparator(),
                 _btnSearch,
                 _btnExpandFailed,
+                _btnCopyTreeJson,
                 _btnOpenRun,
                 new ToolStripSeparator(),
                 _btnFlowApiSettings
@@ -623,6 +634,8 @@ namespace PAMonitor.XrmToolBox
             _tvTree.Nodes.Clear();
             _txtDetails.Clear();
             _selectedRun = null;
+            _treeRootRun = null;
+            _treeRelatedRuns = Array.Empty<FlowRunInfo>();
             if (!string.IsNullOrEmpty(statusMessage))
             {
                 _lblStatus.Text = statusMessage;
@@ -1041,6 +1054,7 @@ namespace PAMonitor.XrmToolBox
 
             var loadVersion = ++_treeLoadVersion;
             _treeRelatedRuns = Array.Empty<FlowRunInfo>();
+            _treeRootRun = root;
 
             _tvTree.BeginUpdate();
             _tvTree.Nodes.Clear();
@@ -1239,6 +1253,98 @@ namespace PAMonitor.XrmToolBox
             {
                 _expandFailedPending = false;
             }
+        }
+
+        private void CopySelectedRunTreeJson()
+        {
+            var root = _treeRootRun;
+            if (root == null && _tvTree.Nodes.Count > 0 && _tvTree.Nodes[0].Tag is FlowRunInfo treeRoot)
+            {
+                root = treeRoot;
+            }
+
+            if (root == null && _lvRuns.SelectedItems.Count > 0)
+            {
+                root = _lvRuns.SelectedItems[0].Tag as FlowRunInfo;
+            }
+
+            if (root == null)
+            {
+                root = _selectedRun;
+            }
+
+            if (root == null)
+            {
+                MessageBox.Show(this,
+                    "Select a run first. The full nested execution tree will be copied as JSON.",
+                    "Copy tree JSON",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            if (_queryService == null)
+            {
+                MessageBox.Show(this, "Connect to an environment first.", "Copy tree JSON",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var exportRoot = root;
+            WorkAsync(new WorkAsyncInfo
+            {
+                Message = "Building run tree JSON...",
+                Work = (worker, args) =>
+                {
+                    IReadOnlyList<FlowRunInfo> related;
+                    if (_treeRelatedRuns != null
+                        && _treeRelatedRuns.Count > 0
+                        && ReferenceEquals(_treeRootRun, exportRoot))
+                    {
+                        related = _treeRelatedRuns;
+                    }
+                    else
+                    {
+                        related = _queryService.CollectTreeRuns(exportRoot);
+                    }
+
+                    var tree = FlowRunTreeBuilder.ToJsonTree(exportRoot, related);
+                    args.Result = Newtonsoft.Json.JsonConvert.SerializeObject(
+                        tree,
+                        Newtonsoft.Json.Formatting.Indented);
+                },
+                PostWorkCallBack = args =>
+                {
+                    if (args.Error != null)
+                    {
+                        MessageBox.Show(this,
+                            "Could not build the run tree JSON:\r\n" + args.Error.Message,
+                            "Copy tree JSON",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    var json = args.Result as string;
+                    if (string.IsNullOrWhiteSpace(json))
+                    {
+                        MessageBox.Show(this, "The run tree JSON is empty.", "Copy tree JSON",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    try
+                    {
+                        Clipboard.SetText(json);
+                        _lblStatus.Text = $"Run tree JSON copied ({json.Length:N0} chars).";
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(this, "Could not copy JSON to clipboard:\r\n" + ex.Message,
+                            "Copy tree JSON", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            });
         }
 
         private void ExpandFailedRecursive(TreeNode node)
