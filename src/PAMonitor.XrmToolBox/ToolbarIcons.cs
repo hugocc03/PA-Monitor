@@ -14,6 +14,7 @@ namespace PAMonitor.XrmToolBox
         public static Image ExpandFailures { get; } = Create(DrawExpandFailures);
         public static Image OpenRun { get; } = Create(DrawOpenRun);
         public static Image Copy { get; } = Create(DrawCopy);
+        public static Image CopyTreeJson { get; } = Create(DrawCopyTreeJson);
 
         private delegate void IconDrawer(Graphics g);
 
@@ -153,6 +154,32 @@ namespace PAMonitor.XrmToolBox
                 g.DrawRectangle(pen, rear.X, rear.Y, rear.Width, rear.Height);
                 g.FillRectangle(front, frontBox);
                 g.DrawRectangle(pen, frontBox.X, frontBox.Y, frontBox.Width, frontBox.Height);
+            }
+        }
+
+        private static void DrawCopyTreeJson(Graphics g)
+        {
+            using (var pen = new Pen(Color.FromArgb(70, 90, 120), 1.2f))
+            using (var fill = new SolidBrush(Color.FromArgb(70, 90, 120)))
+            {
+                g.FillEllipse(fill, 1.5f, 1.5f, 3f, 3f);
+                g.FillEllipse(fill, 1.5f, 7f, 3f, 3f);
+                g.FillEllipse(fill, 1.5f, 12f, 3f, 3f);
+                g.DrawLine(pen, 3f, 4.5f, 3f, 7f);
+                g.DrawLine(pen, 3f, 10f, 3f, 12f);
+                g.DrawLine(pen, 4.5f, 8.5f, 7.5f, 8.5f);
+                g.FillEllipse(fill, 7.5f, 7f, 3f, 3f);
+            }
+
+            using (var pen = new Pen(Color.FromArgb(40, 110, 180), 1.2f))
+            using (var front = new SolidBrush(Color.White))
+            {
+                var box = new RectangleF(8.5f, 1.5f, 6.5f, 7.5f);
+                g.FillRectangle(front, box);
+                g.DrawRectangle(pen, box.X, box.Y, box.Width, box.Height);
+                g.DrawLine(pen, 10f, 3.5f, 13.5f, 3.5f);
+                g.DrawLine(pen, 10f, 5.5f, 13.5f, 5.5f);
+                g.DrawLine(pen, 10f, 7.5f, 12.5f, 7.5f);
             }
         }
 

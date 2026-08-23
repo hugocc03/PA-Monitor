@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace PAMonitor.XrmToolBox.Models
 {
@@ -25,11 +26,38 @@ namespace PAMonitor.XrmToolBox.Models
         public TimeSpan? Duration { get; set; }
         /// <summary>name del run padre (string), no GUID.</summary>
         public string ParentRunName { get; set; }
+        /// <summary>Run id del caller (alternativa/complemento a parentrunid).</summary>
+        public string CallingProductRunId { get; set; }
+        public string CallingProductResourceId { get; set; }
+        /// <summary>Agrupa todas las ejecuciones de una misma cadena padre→hijos.</summary>
+        public string ClientTrackingId { get; set; }
         public string ErrorCode { get; set; }
         public string ErrorMessage { get; set; }
         public string TriggerType { get; set; }
         public int? IsPrimary { get; set; }
         public string ResourceId { get; set; }
+    }
+
+    /// <summary>Nested run tree payload for clipboard JSON export.</summary>
+    public sealed class FlowRunTreeJsonNode
+    {
+        public Guid RunId { get; set; }
+        public string RunName { get; set; }
+        public string FlowName { get; set; }
+        public Guid WorkflowId { get; set; }
+        public string Status { get; set; }
+        public DateTime? StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public double? DurationMs { get; set; }
+        public string ParentRunName { get; set; }
+        public string CallingProductRunId { get; set; }
+        public string ClientTrackingId { get; set; }
+        public string ErrorCode { get; set; }
+        public string ErrorMessage { get; set; }
+        public string TriggerType { get; set; }
+        public int? IsPrimary { get; set; }
+        public string ResourceId { get; set; }
+        public List<FlowRunTreeJsonNode> Children { get; set; } = new List<FlowRunTreeJsonNode>();
     }
 
     public sealed class FlowRunFilter

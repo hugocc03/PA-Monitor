@@ -170,11 +170,17 @@ namespace PAMonitor.XrmToolBox.Services
         }
 
         /// <summary>
-        /// Hijos cuyo parentrunid = name del run padre (no el GUID flowrunid).
+        /// Hijos vinculados por parentrunid o callingproductrunid (name / flowrunid del padre).
         /// </summary>
-        public IReadOnlyList<FlowRunInfo> GetChildRuns(string parentRunName)
+        public IReadOnlyList<FlowRunInfo> GetChildRuns(FlowRunInfo parentRun)
         {
-            if (string.IsNullOrWhiteSpace(parentRunName))
+            if (parentRun == null)
+            {
+                return Array.Empty<FlowRunInfo>();
+            }
+
+            var keys = FlowRunTreeBuilder.GetParentMatchKeys(parentRun);
+            if (keys.Count == 0)
             {
                 return Array.Empty<FlowRunInfo>();
             }
@@ -182,18 +188,118 @@ namespace PAMonitor.XrmToolBox.Services
             var query = new QueryExpression("flowrun")
             {
                 ColumnSet = CreateRunColumnSet(),
+                Criteria = BuildParentLinkFilter(keys),
+                TopCount = 5000
+            };
+
+            return SortRuns(RetrieveAll(query).Select(MapRun)).ToList();
+        }
+
+        /// <summary>
+        /// Todas las ejecuciones de una misma cadena (raíz + hijos), si clienttrackingid está informado.
+        /// </summary>
+        public IReadOnlyList<FlowRunInfo> GetRunsByClientTrackingId(string clientTrackingId)
+        {
+            if (string.IsNullOrWhiteSpace(clientTrackingId))
+            {
+                return Array.Empty<FlowRunInfo>();
+            }
+
+            var query = new QueryExpression("flowrun")
+            {
+                ColumnSet = CreateRunColumnSet(),
+                TopCount = 5000,
                 Criteria = new FilterExpression
                 {
                     Conditions =
                     {
-                        new ConditionExpression("parentrunid", ConditionOperator.Equal, parentRunName)
+                        new ConditionExpression("clienttrackingid", ConditionOperator.Equal, clientTrackingId.Trim())
                     }
-                },
-                Orders = { new OrderExpression("starttime", OrderType.Ascending) }
+                }
             };
 
-            var results = _service.RetrieveMultiple(query);
-            return results.Entities.Select(MapRun).ToList();
+            return SortRuns(RetrieveAll(query).Select(MapRun)).ToList();
+        }
+
+        /// <summary>
+        /// Recursively collects the root run and all descendant child runs.
+        /// </summary>
+        public IReadOnlyList<FlowRunInfo> CollectTreeRuns(FlowRunInfo root)
+        {
+            if (root == null)
+            {
+                return Array.Empty<FlowRunInfo>();
+            }
+
+            if (!string.IsNullOrWhiteSpace(root.ClientTrackingId))
+            {
+                var byTracking = GetRunsByClientTrackingId(root.ClientTrackingId);
+                if (byTracking.Count > 0)
+                {
+                    return byTracking;
+                }
+            }
+
+            var collected = new Dictionary<Guid, FlowRunInfo>();
+            if (root.RunId != Guid.Empty)
+            {
+                collected[root.RunId] = root;
+            }
+
+            var queue = new Queue<FlowRunInfo>();
+            queue.Enqueue(root);
+
+            while (queue.Count > 0)
+            {
+                var parent = queue.Dequeue();
+                foreach (var child in GetChildRuns(parent))
+                {
+                    if (child.RunId == Guid.Empty || collected.ContainsKey(child.RunId))
+                    {
+                        continue;
+                    }
+
+                    collected[child.RunId] = child;
+                    queue.Enqueue(child);
+                }
+            }
+
+            if (root.RunId == Guid.Empty)
+            {
+                return new[] { root }.Concat(collected.Values).ToList();
+            }
+
+            return collected.Values
+                .OrderBy(r => r.StartTime ?? DateTime.MaxValue)
+                .ThenBy(r => r.FlowName ?? r.RunName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private static IEnumerable<FlowRunInfo> SortRuns(IEnumerable<FlowRunInfo> runs)
+        {
+            return runs
+                .OrderBy(r => r.StartTime ?? DateTime.MaxValue)
+                .ThenBy(r => r.FlowName ?? r.RunName ?? string.Empty, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static FilterExpression BuildParentLinkFilter(IEnumerable<string> parentKeys)
+        {
+            var linkFilter = new FilterExpression(LogicalOperator.Or);
+            foreach (var key in parentKeys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                linkFilter.AddCondition("parentrunid", ConditionOperator.Equal, key);
+                linkFilter.AddCondition("callingproductrunid", ConditionOperator.Equal, key);
+            }
+
+            return linkFilter;
+        }
+
+        private List<Entity> RetrieveAll(QueryExpression query)
+        {
+            // Elastic tables (flowrun) reject multi-column ORDER BY and paging without a matching index.
+            // Fetch a single page and sort/filter in memory when needed.
+            var page = _service.RetrieveMultiple(query);
+            return page.Entities?.ToList() ?? new List<Entity>();
         }
 
         private static ColumnSet CreateRunColumnSet()
@@ -208,6 +314,9 @@ namespace PAMonitor.XrmToolBox.Services
                 "workflowid",
                 "workflow",
                 "parentrunid",
+                "callingproductrunid",
+                "callingproductresourceid",
+                "clienttrackingid",
                 "errorcode",
                 "errormessage",
                 "triggertype",
@@ -247,6 +356,9 @@ namespace PAMonitor.XrmToolBox.Services
                 EndTime = end,
                 Duration = duration,
                 ParentRunName = e.GetAttributeValue<string>("parentrunid"),
+                CallingProductRunId = e.GetAttributeValue<string>("callingproductrunid"),
+                CallingProductResourceId = e.GetAttributeValue<string>("callingproductresourceid"),
+                ClientTrackingId = e.GetAttributeValue<string>("clienttrackingid"),
                 ErrorCode = e.GetAttributeValue<string>("errorcode"),
                 ErrorMessage = e.GetAttributeValue<string>("errormessage"),
                 TriggerType = e.GetAttributeValue<string>("triggertype"),

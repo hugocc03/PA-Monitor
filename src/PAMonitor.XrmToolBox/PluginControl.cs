@@ -22,12 +22,16 @@ namespace PAMonitor.XrmToolBox
         private readonly List<FlowDefinition> _flows = new List<FlowDefinition>();
         private readonly List<FlowRunInfo> _currentRuns = new List<FlowRunInfo>();
         private readonly List<SolutionDefinition> _allSolutions = new List<SolutionDefinition>();
+        private IReadOnlyList<FlowRunInfo> _treeRelatedRuns = Array.Empty<FlowRunInfo>();
+        private FlowRunInfo _treeRootRun;
+        private int _treeLoadVersion;
 
         private ToolStrip _toolStrip;
         private ToolStripButton _btnRefreshSolutions;
         private ToolStripButton _btnLoadFlows;
         private ToolStripButton _btnSearch;
         private ToolStripButton _btnExpandFailed;
+        private ToolStripButton _btnCopyTreeJson;
         private ToolStripButton _btnOpenRun;
         private Timer _debounceSolutions;
         private Timer _debounceFlows;
@@ -92,6 +96,13 @@ namespace PAMonitor.XrmToolBox
                 ImageScaling = ToolStripItemImageScaling.None,
                 ToolTipText = "In the run tree, expand nodes marked Failed so you can quickly see which child flow failed."
             };
+            _btnCopyTreeJson = new ToolStripButton("Copy tree JSON")
+            {
+                Image = ToolbarIcons.CopyTreeJson,
+                DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
+                ImageScaling = ToolStripItemImageScaling.None,
+                ToolTipText = "Copy the full nested run tree of the selected execution as JSON."
+            };
             _btnOpenRun = new ToolStripButton("Open run")
             {
                 Image = ToolbarIcons.OpenRun,
@@ -103,6 +114,7 @@ namespace PAMonitor.XrmToolBox
             _btnLoadFlows.Click += (_, __) => ExecuteMethod(RefreshFlows);
             _btnSearch.Click += (_, __) => ExecuteMethod(RefreshRuns);
             _btnExpandFailed.Click += (_, __) => ExpandFailedNodes();
+            _btnCopyTreeJson.Click += (_, __) => CopySelectedRunTreeJson();
             _btnOpenRun.Click += (_, __) => OpenSelectedRunInBrowser();
             _toolStrip.Items.AddRange(new ToolStripItem[]
             {
@@ -111,6 +123,7 @@ namespace PAMonitor.XrmToolBox
                 new ToolStripSeparator(),
                 _btnSearch,
                 _btnExpandFailed,
+                _btnCopyTreeJson,
                 _btnOpenRun
             });
 
@@ -533,6 +546,8 @@ namespace PAMonitor.XrmToolBox
             _tvTree.Nodes.Clear();
             _txtDetails.Clear();
             _selectedRun = null;
+            _treeRootRun = null;
+            _treeRelatedRuns = Array.Empty<FlowRunInfo>();
             if (!string.IsNullOrEmpty(statusMessage))
             {
                 _lblStatus.Text = statusMessage;
@@ -813,15 +828,88 @@ namespace PAMonitor.XrmToolBox
 
         private void LoadRunTree(FlowRunInfo root)
         {
+            if (root == null || _queryService == null)
+            {
+                return;
+            }
+
+            var loadVersion = ++_treeLoadVersion;
+            _treeRelatedRuns = Array.Empty<FlowRunInfo>();
+            _treeRootRun = root;
+
             _tvTree.BeginUpdate();
             _tvTree.Nodes.Clear();
-
-            var rootNode = CreateRunNode(root);
-            rootNode.Nodes.Add(new TreeNode("…") { Tag = "lazy" });
-            _tvTree.Nodes.Add(rootNode);
-            rootNode.Expand();
-
+            var loadingNode = new TreeNode("Loading run tree…");
+            _tvTree.Nodes.Add(loadingNode);
             _tvTree.EndUpdate();
+
+            WorkAsync(new WorkAsyncInfo
+            {
+                Message = "Loading nested flow runs...",
+                Work = (worker, args) =>
+                {
+                    IReadOnlyList<FlowRunInfo> related;
+                    if (!string.IsNullOrWhiteSpace(root.ClientTrackingId))
+                    {
+                        related = _queryService.GetRunsByClientTrackingId(root.ClientTrackingId);
+                    }
+                    else
+                    {
+                        related = Array.Empty<FlowRunInfo>();
+                    }
+
+                    args.Result = related;
+                },
+                PostWorkCallBack = args =>
+                {
+                    if (loadVersion != _treeLoadVersion || !ReferenceEquals(_selectedRun, root))
+                    {
+                        return;
+                    }
+
+                    _tvTree.BeginUpdate();
+                    _tvTree.Nodes.Clear();
+
+                    if (args.Error != null)
+                    {
+                        var errorNode = CreateRunNode(root);
+                        errorNode.Nodes.Add(new TreeNode("Error loading tree: " + args.Error.Message));
+                        _tvTree.Nodes.Add(errorNode);
+                        _tvTree.EndUpdate();
+                        return;
+                    }
+
+                    var related = (IReadOnlyList<FlowRunInfo>)args.Result ?? Array.Empty<FlowRunInfo>();
+                    if (related.Count > 0)
+                    {
+                        _treeRelatedRuns = related;
+                        var rootNode = CreateRunNode(root);
+                        PopulateChildNodes(rootNode, root, related);
+                        _tvTree.Nodes.Add(rootNode);
+                        rootNode.Expand();
+                        _tvTree.EndUpdate();
+                        return;
+                    }
+
+                    _treeRelatedRuns = Array.Empty<FlowRunInfo>();
+                    var lazyRootNode = CreateRunNode(root);
+                    lazyRootNode.Nodes.Add(new TreeNode("…") { Tag = "lazy" });
+                    _tvTree.Nodes.Add(lazyRootNode);
+                    lazyRootNode.Expand();
+                    _tvTree.EndUpdate();
+                }
+            });
+        }
+
+        private void PopulateChildNodes(TreeNode parentNode, FlowRunInfo parentRun, IReadOnlyList<FlowRunInfo> relatedRuns)
+        {
+            var children = FlowRunTreeBuilder.GetChildren(parentRun, relatedRuns);
+            foreach (var child in children)
+            {
+                var childNode = CreateRunNode(child);
+                PopulateChildNodes(childNode, child, relatedRuns);
+                parentNode.Nodes.Add(childNode);
+            }
         }
 
         private TreeNode CreateRunNode(FlowRunInfo run)
@@ -867,7 +955,14 @@ namespace PAMonitor.XrmToolBox
                 Message = "Loading child flows...",
                 Work = (worker, args) =>
                 {
-                    args.Result = _queryService.GetChildRuns(parentRun.RunName);
+                    if (_treeRelatedRuns != null && _treeRelatedRuns.Count > 0)
+                    {
+                        args.Result = FlowRunTreeBuilder.GetChildren(parentRun, _treeRelatedRuns);
+                    }
+                    else
+                    {
+                        args.Result = _queryService.GetChildRuns(parentRun);
+                    }
                 },
                 PostWorkCallBack = args =>
                 {
@@ -882,15 +977,28 @@ namespace PAMonitor.XrmToolBox
                     var children = (IReadOnlyList<FlowRunInfo>)args.Result;
                     if (children.Count == 0)
                     {
-                        e.Node.Nodes.Add(new TreeNode("(no children)"));
+                        e.Node.Nodes.Add(new TreeNode("(no child runs in Dataverse)"));
                         return;
                     }
 
                     foreach (var child in children)
                     {
                         var childNode = CreateRunNode(child);
-                        childNode.Nodes.Add(new TreeNode("…") { Tag = "lazy" });
+                        if (_treeRelatedRuns != null && _treeRelatedRuns.Count > 0)
+                        {
+                            PopulateChildNodes(childNode, child, _treeRelatedRuns);
+                        }
+                        else
+                        {
+                            childNode.Nodes.Add(new TreeNode("…") { Tag = "lazy" });
+                        }
+
                         e.Node.Nodes.Add(childNode);
+                    }
+
+                    if (_expandFailedPending)
+                    {
+                        ExpandFailedRecursive(e.Node);
                     }
                 }
             });
@@ -905,6 +1013,8 @@ namespace PAMonitor.XrmToolBox
             }
         }
 
+        private bool _expandFailedPending;
+
         private void ExpandFailedNodes()
         {
             if (_tvTree.Nodes.Count == 0)
@@ -918,17 +1028,123 @@ namespace PAMonitor.XrmToolBox
                 return;
             }
 
-            foreach (TreeNode node in _tvTree.Nodes)
+            _expandFailedPending = true;
+            try
             {
-                ExpandFailedRecursive(node);
+                foreach (TreeNode node in _tvTree.Nodes)
+                {
+                    ExpandFailedRecursive(node);
+                }
             }
+            finally
+            {
+                _expandFailedPending = false;
+            }
+        }
+
+        private void CopySelectedRunTreeJson()
+        {
+            var root = _treeRootRun;
+            if (root == null && _tvTree.Nodes.Count > 0 && _tvTree.Nodes[0].Tag is FlowRunInfo treeRoot)
+            {
+                root = treeRoot;
+            }
+
+            if (root == null && _lvRuns.SelectedItems.Count > 0)
+            {
+                root = _lvRuns.SelectedItems[0].Tag as FlowRunInfo;
+            }
+
+            if (root == null)
+            {
+                root = _selectedRun;
+            }
+
+            if (root == null)
+            {
+                MessageBox.Show(this,
+                    "Select a run first. The full nested execution tree will be copied as JSON.",
+                    "Copy tree JSON",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            if (_queryService == null)
+            {
+                MessageBox.Show(this, "Connect to an environment first.", "Copy tree JSON",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var exportRoot = root;
+            WorkAsync(new WorkAsyncInfo
+            {
+                Message = "Building run tree JSON...",
+                Work = (worker, args) =>
+                {
+                    IReadOnlyList<FlowRunInfo> related;
+                    if (_treeRelatedRuns != null
+                        && _treeRelatedRuns.Count > 0
+                        && ReferenceEquals(_treeRootRun, exportRoot))
+                    {
+                        related = _treeRelatedRuns;
+                    }
+                    else
+                    {
+                        related = _queryService.CollectTreeRuns(exportRoot);
+                    }
+
+                    var tree = FlowRunTreeBuilder.ToJsonTree(exportRoot, related);
+                    args.Result = Newtonsoft.Json.JsonConvert.SerializeObject(
+                        tree,
+                        Newtonsoft.Json.Formatting.Indented);
+                },
+                PostWorkCallBack = args =>
+                {
+                    if (args.Error != null)
+                    {
+                        MessageBox.Show(this,
+                            "Could not build the run tree JSON:\r\n" + args.Error.Message,
+                            "Copy tree JSON",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    var json = args.Result as string;
+                    if (string.IsNullOrWhiteSpace(json))
+                    {
+                        MessageBox.Show(this, "The run tree JSON is empty.", "Copy tree JSON",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    try
+                    {
+                        Clipboard.SetText(json);
+                        _lblStatus.Text = $"Run tree JSON copied ({json.Length:N0} chars).";
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(this, "Could not copy JSON to clipboard:\r\n" + ex.Message,
+                            "Copy tree JSON", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            });
         }
 
         private void ExpandFailedRecursive(TreeNode node)
         {
-            if (node.Tag is FlowRunInfo run &&
-                string.Equals(run.Status, "Failed", StringComparison.OrdinalIgnoreCase))
+            if (node.Tag is FlowRunInfo run
+                && string.Equals(run.Status, "Failed", StringComparison.OrdinalIgnoreCase))
             {
+                if (node.Nodes.Count == 1 && node.Nodes[0].Tag is string lazyTag && lazyTag == "lazy")
+                {
+                    node.Expand();
+                    return;
+                }
+
                 node.Expand();
                 node.EnsureVisible();
             }
@@ -953,6 +1169,8 @@ namespace PAMonitor.XrmToolBox
                 $"Duration:    {run.Duration}{Environment.NewLine}" +
                 $"Trigger:     {run.TriggerType}{Environment.NewLine}" +
                 $"Parent Run:  {run.ParentRunName}{Environment.NewLine}" +
+                $"Caller Run:  {run.CallingProductRunId}{Environment.NewLine}" +
+                $"Tracking Id: {run.ClientTrackingId}{Environment.NewLine}" +
                 $"IsPrimary:   {run.IsPrimary}{Environment.NewLine}" +
                 $"Error code:  {run.ErrorCode}{Environment.NewLine}" +
                 $"Open run:    {(runUrl ?? "(unavailable — missing environment/flow/run id)")}{Environment.NewLine}" +
