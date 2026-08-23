@@ -9,24 +9,18 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/hugocc03/PA-Monitor</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/hugocc03/PA-Monitor/main/assets/icon-128.png</iconUrl>
+    <!-- XrmToolBox Tool Library reads iconUrl; keep both for NuGet gallery + XTB portal -->
+    <iconUrl>https://cdn.jsdelivr.net/gh/hugocc03/PA-Monitor@main/assets/icon-128.png</iconUrl>
     <icon>icon.png</icon>
     <readme>README.md</readme>
     <description>Monitor Power Automate Cloud runs from the Dataverse flowrun table with nested child-flow tree, filters, and error summary.</description>
     <releaseNotes>
       1.0.2
-      - Add iconUrl for XrmToolBox Tool Library registration (portal requires a public Logo Url)
+      - Fix Tool Library registration: public iconUrl (jsDelivr CDN) required by XrmToolBox portal
+      - Keep embedded package icon and README
 
-      1.0.1
-      - Plugin logos (Small/Big) for XrmToolBox tools list
-      - Author metadata: Hugo Calvo Cruz
-
-      1.0.0
-      - Multi-solution and multi-flow selection with search
-      - Run list with status colors and filters
-      - Lazy child-flow tree with Expand failures
-      - Open run in Power Automate portal
-      - Dataverse error message in details panel
+      1.0.0 / 1.0.1
+      - Initial release features (solutions/flows/runs tree, filters, Open run, Dataverse errors)
       Note: only production runs synced to flowrun appear (not designer Test runs).
     </releaseNotes>
     <copyright>Copyright 2026 Hugo Calvo Cruz</copyright>
