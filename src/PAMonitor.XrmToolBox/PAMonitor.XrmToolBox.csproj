@@ -28,7 +28,7 @@
 
     <Description>Monitor Power Automate Cloud runs from Dataverse flowrun with nested child-flow tree</Description>
 
-    <Version>1.0.0.0</Version>
+    <Version>1.0.1.0</Version>
 
     <Authors>Hugo Calvo Cruz</Authors>
 
