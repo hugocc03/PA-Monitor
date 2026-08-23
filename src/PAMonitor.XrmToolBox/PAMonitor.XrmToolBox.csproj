@@ -1,58 +1,79 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+
+
   <PropertyGroup>
+
     <TargetFramework>net48</TargetFramework>
+
     <UseWindowsForms>true</UseWindowsForms>
+
     <RootNamespace>PAMonitor.XrmToolBox</RootNamespace>
+
     <AssemblyName>PAMonitor.XrmToolBox</AssemblyName>
+
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+
     <LangVersion>latest</LangVersion>
+
     <Nullable>disable</Nullable>
+
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
     <OutputPath>bin\$(Configuration)\</OutputPath>
+
     <Company>PA Monitor</Company>
+
     <Product>Power Automate Run Monitor</Product>
-    <Description>Monitor de ejecuciones de flujos Power Automate Cloud con vista en árbol</Description>
+
+    <Description>Monitor Power Automate Cloud runs from Dataverse flowrun with nested child-flow tree</Description>
+
     <Version>1.0.0.0</Version>
-    <Authors>PA Monitor</Authors>
+
+    <Authors>Hugo Calvo Cruz</Authors>
+
   </PropertyGroup>
+
+
 
   <ItemGroup>
+
     <PackageReference Include="XrmToolBoxPackage" Version="1.2025.10.74" />
+
     <PackageReference Include="MscrmTools.Xrm.Connection" Version="1.2025.9.64" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.72.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+
   </ItemGroup>
 
+
+
   <!--
+
     Copia la DLL al Plugins de XrmToolBox tras compilar en Debug.
+
     Ajusta XrmToolBoxPluginsPath si tu instalación está en otra carpeta.
+
   -->
+
   <PropertyGroup>
+
     <XrmToolBoxPluginsPath Condition="'$(XrmToolBoxPluginsPath)' == ''">$(APPDATA)\MscrmTools\XrmToolBox\Plugins</XrmToolBoxPluginsPath>
+
   </PropertyGroup>
 
+
+
   <Target Name="CopyToXrmToolBox" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
-    <PropertyGroup>
-      <_XtbPluginDir>$(XrmToolBoxPluginsPath)\PAMonitor.XrmToolBox</_XtbPluginDir>
-    </PropertyGroup>
-    <MakeDir Directories="$(XrmToolBoxPluginsPath)" Condition="!Exists('$(XrmToolBoxPluginsPath)')" />
-    <MakeDir Directories="$(_XtbPluginDir)" Condition="!Exists('$(_XtbPluginDir)')" />
+
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(XrmToolBoxPluginsPath)" SkipUnchangedFiles="true" Condition="Exists('$(XrmToolBoxPluginsPath)')" ContinueOnError="WarnAndContinue" />
+
     <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(XrmToolBoxPluginsPath)" SkipUnchangedFiles="true" Condition="Exists('$(TargetDir)$(TargetName).pdb') And Exists('$(XrmToolBoxPluginsPath)')" ContinueOnError="WarnAndContinue" />
-    <ItemGroup>
-      <_Deps Include="$(TargetDir)Microsoft.Identity.Client.dll" />
-      <_Deps Include="$(TargetDir)Microsoft.IdentityModel.Abstractions.dll" />
-      <_Deps Include="$(TargetDir)System.Diagnostics.DiagnosticSource.dll" />
-      <_Deps Include="$(TargetDir)System.Memory.dll" />
-      <_Deps Include="$(TargetDir)System.Buffers.dll" />
-      <_Deps Include="$(TargetDir)System.Runtime.CompilerServices.Unsafe.dll" />
-      <_Deps Include="$(TargetDir)System.Numerics.Vectors.dll" />
-      <_Deps Include="$(TargetDir)System.Threading.Tasks.Extensions.dll" />
-      <_Deps Include="$(TargetDir)System.ValueTuple.dll" />
-    </ItemGroup>
-    <Copy SourceFiles="@(_Deps)" DestinationFolder="$(_XtbPluginDir)" SkipUnchangedFiles="true" Condition="Exists('$(XrmToolBoxPluginsPath)')" ContinueOnError="WarnAndContinue" />
+
     <Message Text="Copied $(TargetFileName) to $(XrmToolBoxPluginsPath)" Importance="high" Condition="Exists('$(XrmToolBoxPluginsPath)')" />
+
   </Target>
 
+
+
 </Project>
+
+

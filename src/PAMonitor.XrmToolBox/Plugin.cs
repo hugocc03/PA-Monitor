@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.Reflection;
 using System.ComponentModel.Composition;
 using XrmToolBox.Extensibility;
 using XrmToolBox.Extensibility.Interfaces;
@@ -10,32 +7,16 @@ namespace PAMonitor.XrmToolBox
     [Export(typeof(IXrmToolBoxPlugin)),
      ExportMetadata("Name", "PA Run Monitor"),
      ExportMetadata("Description", "Power Automate Cloud run monitor with nested child-flow tree"),
-     ExportMetadata("SmallImageBase64", null),
-     ExportMetadata("BigImageBase64", null),
+     ExportMetadata("SmallImageBase64", "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAH2SURBVFhH7ZS9L0NRFMD9EULijzA0EjEYGEwsDBIJAwODhIihvgZKEJ8lOiC+JYShaUkjvMFXRDVFKpo2DUElbZrQRDSGJkfOa1q3972np+qVocNvePfcd87v3nNys94/wvCXZPEL6UYU8L+E4PT6Oe08+d8iAvihqVlKO9uCK16gcUiAwRW76rRNHssLzO+6wBMIq47pLFIvI5BQ4PzhFYyOe0mCVCEJYPHsPq1I1eqKJEkibI8ByVoUkoD+xBoTyNV1QrPRDBanV5JMicH9ZdCa9ZJ1hCRw6/uAgukxyBvohlbTDvQLR1Bk0EP+xDBJBgU0o2VQu9YO18/B5AWUOL4LKMqwMxMVQCrmGuDQ8zVLKQkoyZTMGuJmhhVAiqcqweS4/F0BFnZmsG28QBSU+FUBvH5sQ93GRmxmevYEWQFcw3/IAkrvQLQozgBeP7YB28HuYQUKJ8ph2SrEYiQB/h2gFJUTKJ2phgOXOy5GEmB7mqPrIBXlBSoXmmQfJJIA+w5gT/kkibDc3oDTF5KsIyQBNfm/ArpFmxhUG/2WQ14g3cQEPN4gTG/ak6Zl5EBMVN9rkcQoXLkDEYGfgidAAUzGx6iQBfCWsFUs4+sXokCX4UgSw/18DjnIAnhKvoffQb0VsgCeiu/hd+B+PoccZAG1yAh8AieIkm5i2tXxAAAAAElFTkSuQmCC"),
+     ExportMetadata("BigImageBase64", "iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOCSURBVHhe7dlNaxNBGMDxfghF8eZXqAcvCiLoqV7qIagIQi+CeKqHWPRgtQRRkFZq0VK11QZaEFotrW8tiC1ikJQQ8DVYlBQKOdiDSg+FkWdhw2RmZ2d2n8wkuz6HPzTZ3WT7o5tnJ+34s7XNqPh1iE9Q0SJAZASIjACRESCyBsDbU0XWefIhpQmcCBARASIjQGTGgLmJIqvUtv/7wIEAEREgMgJERoDICBAZASIjQGQEiIwAkTkBXK3+ZtOlb17itqRnHfDyi0W2Z+AS29Gf9YKf4Tlxv6RmFTA7/7IOJ5YWRGuAb7/XGv7yxGDbx40t6ThXjRcW2ZvKmvR81KwBjhXKEprYkdG7bHC54H1GisfbLvdqnB0c6mZPy6vStii1DHCn8Pj4owmnmADYefOo153lWWm7adYA4RIW0UxzgckDQtlng9I+JlkDhHrnFiQcvwMjQ2zv9SvS82K2MEVA6PTjC6y0vintG5ZVQBgSIqJ4GwOX+pmpaeeYQYDQsdGeSMPFKqDf+x+/6jfSYb+8S0wVIBRluDgBjFMzMMNWQGGAfibDpW0B+aJiwkeHbgVkAgjphksiAPl0mIfuDRutgEwBobDhkjhAviDMczOzRiugKICQargkGpDPx8wtrUhoYjPltciAUNBwSQ2gn24FhAH04xFTAwiX5ci7Inv+uSqB8cW9hP3gOP59Ew3oo53I5+ufe3A7I96888UZItD+W13eNzjiOSQOMAiNr+vBmNEKKArg4eEMe/3lq3Qu3uskAVCHxgcT2f+eMWwFZArYff8s+/CzJp1T/XVcAIatCFRFQYPtsB/sb/olrQng+ScD7NPGX+nYhtexDahbEfDZRuPTAYrDQpVVQJMVgUs0PhWgaliosgao+5/I7mt9LDM5GbpPs9H4ggDDhoUqa4AmN7SqbKHxiYC6YaGqhYAXnaPx8YAmw0KVNUDd/0R2Xe1zjsbnA5oOC1XWACHxZpavd27eORrfjaV8pGGhyiqgyYog6VkF9AtbESQ9J4BpjgCRESAyAkRGgMgIEFlsQCo4AkSWCMB9p8IftzICRKYEbKd6+hcaThoei/u0QwSIjACRESAyAkTmBLBS3WQrpfVIZbKzDYDwWNxHF7yveC7Nzglgq26P+NsNWxEgMgJERoDInADGGSLNKDVDJM0RIDICREaAyAgQGQEiI0BkBIiMAJH9A732zALUrU7/AAAAAElFTkSuQmCC"),
      ExportMetadata("BackgroundColor", "WhiteSmoke"),
      ExportMetadata("PrimaryFontColor", "Black"),
      ExportMetadata("SecondaryFontColor", "DimGray")]
     public class Plugin : PluginBase
     {
-        static Plugin()
-        {
-            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
-        }
-
         public override IXrmToolBoxPluginControl GetControl()
         {
             return new PluginControl();
-        }
-
-        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            var name = new AssemblyName(args.Name).Name + ".dll";
-            var folder = Path.Combine(
-                Path.GetDirectoryName(typeof(Plugin).Assembly.Location) ?? string.Empty,
-                "PAMonitor.XrmToolBox");
-
-            var candidate = Path.Combine(folder, name);
-            return File.Exists(candidate) ? Assembly.LoadFrom(candidate) : null;
         }
     }
 }

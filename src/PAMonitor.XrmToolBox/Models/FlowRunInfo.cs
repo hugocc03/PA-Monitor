@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace PAMonitor.XrmToolBox.Models
 {
@@ -31,18 +30,6 @@ namespace PAMonitor.XrmToolBox.Models
         public string TriggerType { get; set; }
         public int? IsPrimary { get; set; }
         public string ResourceId { get; set; }
-        public IReadOnlyList<FlowActionInfo> Actions { get; set; }
-        public string DetailedErrorMessage { get; set; }
-    }
-
-    public sealed class FlowActionInfo
-    {
-        public string Name { get; set; }
-        public string Status { get; set; }
-        public string Code { get; set; }
-        public string ErrorMessage { get; set; }
-        public DateTime? StartTime { get; set; }
-        public DateTime? EndTime { get; set; }
     }
 
     public sealed class FlowRunFilter

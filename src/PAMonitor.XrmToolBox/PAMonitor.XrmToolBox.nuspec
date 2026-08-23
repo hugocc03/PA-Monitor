@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>PAMonitor.XrmToolBox</id>
+    <version>1.0.0</version>
+    <title>PA Run Monitor</title>
+    <authors>Hugo Calvo Cruz</authors>
+    <owners>Hugo Calvo Cruz</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/hugocc03/PA-Monitor</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/hugocc03/PA-Monitor/main/assets/icon-128.png</iconUrl>
+    <description>Monitor Power Automate Cloud runs from the Dataverse flowrun table with nested child-flow tree, filters, and error summary.</description>
+    <releaseNotes>
+      Initial release.
+      - Multi-solution and multi-flow selection with search
+      - Run list with status colors and filters
+      - Lazy child-flow tree with Expand failures
+      - Open run in Power Automate portal
+      - Dataverse error message in details panel
+      Note: only production runs synced to flowrun appear (not designer Test runs).
+    </releaseNotes>
+    <copyright>Copyright 2026 Hugo Calvo Cruz</copyright>
+    <tags>XrmToolBox PowerAutomate Dataverse FlowRun CloudFlow</tags>
+    <dependencies>
+      <dependency id="XrmToolBox" version="1.2025.10.74" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\PAMonitor.XrmToolBox.dll" target="lib\net48\Plugins" />
+  </files>
+</package>

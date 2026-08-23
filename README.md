@@ -1,8 +1,8 @@
 # PA Run Monitor
 
-Plugin de [XrmToolBox](https://www.xrmtoolbox.com/) para monitorizar ejecuciones de **Power Automate Cloud** desde **Dataverse**, con árbol de flujos hijo, filtros y detalle de errores a nivel de acción.
+Plugin de [XrmToolBox](https://www.xrmtoolbox.com/) para monitorizar ejecuciones de **Power Automate Cloud** desde **Dataverse**, con árbol de flujos hijo, filtros y resumen de errores.
 
-Pensado para cuando el monitor nativo de Power Automate llega tarde, no muestra bien runs incompletos o no deja ver el error real de la acción.
+Pensado para cuando el monitor nativo de Power Automate llega tarde o no muestra bien runs incompletos.
 
 ## Características
 
@@ -13,20 +13,20 @@ Pensado para cuando el monitor nativo de Power Automate llega tarde, no muestra 
 - Árbol de runs anidados (child flows) con carga lazy
 - **Expand failures** para expandir nodos fallidos
 - Abrir el run en el portal de Power Automate (doble clic, menú contextual o toolbar)
-- Resumen Dataverse + detalle de acciones vía Flow API (opcional, requiere app Entra)
+- Detalle de error desde Dataverse (`flowrun.errormessage`)
+
+## Limitaciones conocidas
+
+- Solo muestra ejecuciones de producción sincronizadas en la tabla **flowrun** de Dataverse (flujos en solución).
+- Las ejecuciones **Test** desde el editor del flujo no se guardan en `flowrun` y no aparecen en el listado.
+- Puede haber varios minutos de retraso entre que termina un run y aparece en Dataverse.
 
 ## Requisitos
 
 - [XrmToolBox](https://www.xrmtoolbox.com/) actualizado
-- Conexión a un entorno Dataverse / Power Platform
+- Conexión a un entorno Dataverse / Power Platform con historial de runs en Dataverse habilitado
 - .NET Framework 4.8 (para compilar)
 - SDK: `dotnet` CLI
-
-Para el **detalle de errores de acción** (Flow API):
-
-- App registration en Entra ID (public client)
-- Permiso delegado `Flows.Read.All` (Microsoft Flow Service) + consent admin
-- Redirect URI `http://localhost` y *Allow public client flows*
 
 ## Instalación (desarrollo)
 
@@ -42,11 +42,7 @@ El script cierra XrmToolBox si está abierto, compila en Debug, copia la DLL a:
 
 `%APPDATA%\MscrmTools\XrmToolBox\Plugins`
 
-y las dependencias MSAL a:
-
-`%APPDATA%\MscrmTools\XrmToolBox\Plugins\PAMonitor.XrmToolBox\`
-
-luego abre XrmToolBox.
+y abre XrmToolBox.
 
 También puedes compilar solo:
 
@@ -64,20 +60,6 @@ dotnet build .\src\PAMonitor.XrmToolBox\PAMonitor.XrmToolBox.csproj -c Debug
 6. Selecciona un run para ver el árbol y el detalle.
 7. Usa **Open run** para abrirlo en make.powerautomate.com.
 
-### Flow API settings
-
-Sin configurar Flow API solo verás el resumen genérico de Dataverse (`ActionFailed`, etc.).
-
-La primera vez que selecciones un run sin Client Id configurado, el tool te preguntará si quieres configurar Flow API. Si dices que no, puedes hacerlo más tarde con el botón **Flow API settings** de la barra superior.
-
-Pasos resumidos (o pídeselos a un admin de Entra):
-
-1. Registrar una app (single tenant).
-2. Copiar el **Application (client) ID**.
-3. Authentication → Mobile and desktop → Redirect URI `http://localhost` → Allow public client flows = Yes.
-4. API permissions → Microsoft Flow Service → `Flows.Read.All` → Grant admin consent.
-5. Pegar el Client Id en **Flow API settings** y volver a seleccionar un run fallido.
-
 ## Estructura del proyecto
 
 ```
@@ -86,16 +68,33 @@ PA-Monitor/
 ├── LICENSE
 ├── README.md
 └── src/PAMonitor.XrmToolBox/
-    ├── Plugin.cs                 # Entrada XrmToolBox + AssemblyResolve
+    ├── Plugin.cs                 # Entrada XrmToolBox
     ├── PluginControl.cs          # UI principal
-    ├── FlowApiSettingsForm.cs
-    ├── Settings.cs
     ├── ToolbarIcons.cs
     ├── Controls/
     ├── Models/
-    └── Services/                 # Dataverse queries, Flow API, MSAL, URLs
+    └── Services/                 # Dataverse queries, URLs
 ```
 
 ## Licencia
 
 MIT — ver [LICENSE](LICENSE).
+
+## Publicación (Tool Library)
+
+Para publicar en la [XrmToolBox Tool Library](https://www.xrmtoolbox.com/documentation/for-developers/deploy-your-plugin-in-plugins-store/):
+
+1. Compilar y empaquetar:
+
+```powershell
+.\pack-release.ps1
+```
+
+2. Verificar el `.nupkg` en `dist/` (DLL en `lib/net48/Plugins/`, dependencia `XrmToolBox`, icono embebido).
+
+3. Publicar en [nuget.org](https://www.nuget.org/) con tu API key.
+
+4. Registrar el Package Id `PAMonitor.XrmToolBox` en el portal XrmToolBox y esperar validación.
+
+Instalación para usuarios: XrmToolBox → Tool Library → buscar **PA Run Monitor**.
+

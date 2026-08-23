@@ -13,7 +13,6 @@ namespace PAMonitor.XrmToolBox
         public static Image RefreshRuns { get; } = Create(DrawRefreshRuns);
         public static Image ExpandFailures { get; } = Create(DrawExpandFailures);
         public static Image OpenRun { get; } = Create(DrawOpenRun);
-        public static Image FlowApiSettings { get; } = Create(DrawFlowApiSettings);
         public static Image Copy { get; } = Create(DrawCopy);
 
         private delegate void IconDrawer(Graphics g);
@@ -139,26 +138,6 @@ namespace PAMonitor.XrmToolBox
             {
                 g.DrawLine(pen, 10.5f, 2.5f, 13.5f, 2.5f);
                 g.DrawLine(pen, 13.5f, 2.5f, 13.5f, 5.5f);
-            }
-        }
-
-        private static void DrawFlowApiSettings(Graphics g)
-        {
-            // Gear
-            using (var brush = new SolidBrush(Color.FromArgb(95, 95, 105)))
-            using (var hub = new SolidBrush(Color.White))
-            {
-                float cx = 8f, cy = 8f, r = 4.2f;
-                for (var i = 0; i < 8; i++)
-                {
-                    var angle = i * 45f * (float)(System.Math.PI / 180);
-                    var x = cx + (float)(System.Math.Cos(angle) * r) - 1.4f;
-                    var y = cy + (float)(System.Math.Sin(angle) * r) - 1.4f;
-                    g.FillEllipse(brush, x, y, 2.8f, 2.8f);
-                }
-
-                g.FillEllipse(brush, cx - 4f, cy - 4f, 8f, 8f);
-                g.FillEllipse(hub, cx - 1.8f, cy - 1.8f, 3.6f, 3.6f);
             }
         }
 

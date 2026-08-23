@@ -14,16 +14,11 @@ using XrmToolBox.Extensibility.Interfaces;
 
 namespace PAMonitor.XrmToolBox
 {
-    public partial class PluginControl : PluginControlBase, ISettingsPlugin
+    public partial class PluginControl : PluginControlBase
     {
-        private Settings _settings;
         private FlowRunQueryService _queryService;
-        private FlowManagementApiClient _flowApi;
-        private FlowTokenProvider _flowTokenProvider;
         private string _environmentId;
-        private Guid _tenantId;
         private FlowRunInfo _selectedRun;
-        private int _detailLoadVersion;
         private readonly List<FlowDefinition> _flows = new List<FlowDefinition>();
         private readonly List<FlowRunInfo> _currentRuns = new List<FlowRunInfo>();
         private readonly List<SolutionDefinition> _allSolutions = new List<SolutionDefinition>();
@@ -34,7 +29,6 @@ namespace PAMonitor.XrmToolBox
         private ToolStripButton _btnSearch;
         private ToolStripButton _btnExpandFailed;
         private ToolStripButton _btnOpenRun;
-        private ToolStripButton _btnFlowApiSettings;
         private Timer _debounceSolutions;
         private Timer _debounceFlows;
 
@@ -56,25 +50,6 @@ namespace PAMonitor.XrmToolBox
         public PluginControl()
         {
             InitializeComponent();
-            LoadSettings();
-        }
-
-        public void ShowSettings()
-        {
-            OpenFlowApiSettings();
-        }
-
-        private void LoadSettings()
-        {
-            if (!SettingsManager.Instance.TryLoad(GetType(), out _settings) || _settings == null)
-            {
-                _settings = new Settings();
-            }
-        }
-
-        private void SaveSettings()
-        {
-            SettingsManager.Instance.Save(GetType(), _settings ?? new Settings());
         }
 
         private void InitializeComponent()
@@ -124,19 +99,11 @@ namespace PAMonitor.XrmToolBox
                 ImageScaling = ToolStripItemImageScaling.None,
                 ToolTipText = "Open the selected run in Power Automate (browser)."
             };
-            _btnFlowApiSettings = new ToolStripButton("Flow API settings")
-            {
-                Image = ToolbarIcons.FlowApiSettings,
-                DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
-                ImageScaling = ToolStripItemImageScaling.None,
-                ToolTipText = "Configure Entra app Client Id for action-level error details."
-            };
             _btnRefreshSolutions.Click += (_, __) => ExecuteMethod(LoadSolutions);
-            _btnLoadFlows.Click += (_, __) => ExecuteMethod(() => LoadFlows(requireSelectedSolutions: false));
-            _btnSearch.Click += (_, __) => ExecuteMethod(() => SearchRuns(requireSelectedFlows: false));
+            _btnLoadFlows.Click += (_, __) => ExecuteMethod(RefreshFlows);
+            _btnSearch.Click += (_, __) => ExecuteMethod(RefreshRuns);
             _btnExpandFailed.Click += (_, __) => ExpandFailedNodes();
             _btnOpenRun.Click += (_, __) => OpenSelectedRunInBrowser();
-            _btnFlowApiSettings.Click += (_, __) => OpenFlowApiSettings();
             _toolStrip.Items.AddRange(new ToolStripItem[]
             {
                 _btnRefreshSolutions,
@@ -144,9 +111,7 @@ namespace PAMonitor.XrmToolBox
                 new ToolStripSeparator(),
                 _btnSearch,
                 _btnExpandFailed,
-                _btnOpenRun,
-                new ToolStripSeparator(),
-                _btnFlowApiSettings
+                _btnOpenRun
             });
 
             _debounceSolutions = new Timer { Interval = 350 };
@@ -429,10 +394,7 @@ namespace PAMonitor.XrmToolBox
         {
             base.UpdateConnection(newService, detail, actionName, parameter);
             _queryService = newService != null ? new FlowRunQueryService(newService) : null;
-            _flowApi = null;
-            _flowTokenProvider = null;
             _environmentId = null;
-            _tenantId = Guid.Empty;
             _allSolutions.Clear();
             _pnlSolutions.Clear();
             _pnlFlows.Clear();
@@ -445,89 +407,49 @@ namespace PAMonitor.XrmToolBox
             }
 
             _environmentId = detail.EnvironmentId;
-            _tenantId = detail.TenantId;
-            TryInitializeFlowApi(newService, detail);
+            if (string.IsNullOrWhiteSpace(_environmentId))
+            {
+                var ctx = EnvironmentContextResolver.Resolve(newService, detail.EnvironmentId, detail.TenantId);
+                _environmentId = ctx?.EnvironmentId;
+            }
 
             _lblStatus.Text = $"Connected to: {detail.ConnectionName}. Loading solutions...";
             ExecuteMethod(LoadSolutions);
         }
 
-        private bool TryInitializeFlowApi(IOrganizationService service, ConnectionDetail detail)
+        private void RefreshFlows()
         {
-            try
-            {
-                if (_settings == null)
-                {
-                    LoadSettings();
-                }
-
-                if (string.IsNullOrWhiteSpace(_settings.FlowAppClientId))
-                {
-                    _flowApi = null;
-                    _flowTokenProvider = null;
-                    return false;
-                }
-
-                var ctx = EnvironmentContextResolver.Resolve(
-                    service,
-                    detail?.EnvironmentId,
-                    detail?.TenantId ?? Guid.Empty);
-
-                if (ctx == null)
-                {
-                    _flowApi = null;
-                    _flowTokenProvider = null;
-                    return false;
-                }
-
-                _environmentId = ctx.EnvironmentId;
-                _tenantId = ctx.TenantId;
-                _flowTokenProvider = new FlowTokenProvider(
-                    _tenantId,
-                    _settings.FlowAppClientId,
-                    _settings.FlowRedirectUri);
-                _flowApi = new FlowManagementApiClient(_flowTokenProvider, _environmentId);
-                return true;
-            }
-            catch
-            {
-                _flowApi = null;
-                _flowTokenProvider = null;
-                return false;
-            }
+            LoadFlows(requireSelectedSolutions: false);
         }
 
-        private void OpenFlowApiSettings()
+        private void RefreshRuns()
         {
-            if (_settings == null)
+            SearchRuns(requireSelectedFlows: false);
+        }
+
+        private void LoadFlowsFromSolutionSelection()
+        {
+            LoadFlows(requireSelectedSolutions: true);
+        }
+
+        private void SearchRunsFromFlowSelection()
+        {
+            SearchRuns(requireSelectedFlows: true);
+        }
+
+        private bool EnsureConnection(string actionName)
+        {
+            if (Service != null)
             {
-                LoadSettings();
+                return true;
             }
 
-            using (var dlg = new FlowApiSettingsForm(_settings))
+            RaiseRequestConnectionEvent(new RequestConnectionEventArgs
             {
-                if (dlg.ShowDialog(this) != DialogResult.OK)
-                {
-                    return;
-                }
-
-                _settings.FlowAppClientId = dlg.ClientId;
-                _settings.FlowRedirectUri = string.IsNullOrWhiteSpace(dlg.RedirectUri)
-                    ? "http://localhost"
-                    : dlg.RedirectUri;
-                SaveSettings();
-
-                _flowApi = null;
-                _flowTokenProvider = null;
-                if (Service != null && ConnectionDetail != null)
-                {
-                    TryInitializeFlowApi(Service, ConnectionDetail);
-                }
-
-                _lblStatus.Text = string.IsNullOrWhiteSpace(_settings.FlowAppClientId)
-                    ? "Flow API Client Id cleared."
-                    : "Flow API Client Id saved. Select a run to load action details.";
-            }
+                ActionName = actionName,
+                Control = this
+            });
+            return false;
         }
 
         private void LoadSolutions()
@@ -581,11 +503,6 @@ namespace PAMonitor.XrmToolBox
         private void DebounceSolutions_Tick(object sender, EventArgs e)
         {
             _debounceSolutions.Stop();
-            if (_queryService == null)
-            {
-                return;
-            }
-
             if (_pnlSolutions.SelectedCount == 0)
             {
                 _pnlFlows.Clear();
@@ -594,24 +511,19 @@ namespace PAMonitor.XrmToolBox
                 return;
             }
 
-            ExecuteMethod(() => LoadFlows(requireSelectedSolutions: true));
+            ExecuteMethod(LoadFlowsFromSolutionSelection);
         }
 
         private void DebounceFlows_Tick(object sender, EventArgs e)
         {
             _debounceFlows.Stop();
-            if (_queryService == null)
-            {
-                return;
-            }
-
             if (_pnlFlows.SelectedCount == 0)
             {
                 ClearRunsUi("Select one or more flows to load runs.");
                 return;
             }
 
-            ExecuteMethod(() => SearchRuns(requireSelectedFlows: true));
+            ExecuteMethod(SearchRunsFromFlowSelection);
         }
 
         private void ClearRunsUi(string statusMessage = null)
@@ -631,8 +543,6 @@ namespace PAMonitor.XrmToolBox
         {
             if (_queryService == null)
             {
-                MessageBox.Show(this, "Connect to an environment first.", "PA Run Monitor",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -680,8 +590,6 @@ namespace PAMonitor.XrmToolBox
         {
             if (_queryService == null)
             {
-                MessageBox.Show(this, "Connect to an environment first.", "PA Run Monitor",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -901,133 +809,6 @@ namespace PAMonitor.XrmToolBox
             _selectedRun = run;
             ShowDetails(run);
             LoadRunTree(run);
-            LoadActionDetails(run);
-        }
-
-        private void LoadActionDetails(FlowRunInfo run)
-        {
-            if (run == null)
-            {
-                return;
-            }
-
-            if (_flowApi == null)
-            {
-                if (_settings == null)
-                {
-                    LoadSettings();
-                }
-
-                if (string.IsNullOrWhiteSpace(_settings.FlowAppClientId))
-                {
-                    AppendDetailsNote(
-                        "Action-level error details are not available because Flow API settings are not configured.\r\n" +
-                        "You can configure them anytime with «Flow API settings» on the toolbar.");
-
-                    if (!_settings.FlowApiSettingsPromptShown)
-                    {
-                        _settings.FlowApiSettingsPromptShown = true;
-                        SaveSettings();
-
-                        var answer = MessageBox.Show(this,
-                            "Flow API is not configured.\n\n" +
-                            "Without this setup, the tool cannot load action-level error details " +
-                            "(you will only see the generic Dataverse ActionFailed summary).\n\n" +
-                            "Do you want to configure Flow API settings now?",
-                            "PA Run Monitor",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Information);
-
-                        if (answer == DialogResult.Yes)
-                        {
-                            OpenFlowApiSettings();
-                            if (_flowApi == null && !TryInitializeFlowApi(Service, ConnectionDetail))
-                            {
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            MessageBox.Show(this,
-                                "Understood. You can configure Flow API settings whenever you want by clicking " +
-                                "«Flow API settings» on the top toolbar.",
-                                "PA Run Monitor",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Information);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-                else if (!TryInitializeFlowApi(Service, ConnectionDetail))
-                {
-                    AppendDetailsNote(
-                        "Action-level details unavailable: could not resolve EnvironmentId/TenantId from the connection or Dataverse.");
-                    return;
-                }
-            }
-
-            if (_flowApi == null && !TryInitializeFlowApi(Service, ConnectionDetail))
-            {
-                AppendDetailsNote("Action-level details unavailable: Flow API client was not initialized.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(run.RunName) || run.WorkflowId == Guid.Empty)
-            {
-                AppendDetailsNote("Action-level details unavailable: missing run name or workflow id.");
-                return;
-            }
-
-            var loadVersion = ++_detailLoadVersion;
-            var flowId = !string.IsNullOrWhiteSpace(run.ResourceId)
-                ? run.ResourceId
-                : run.WorkflowId.ToString("D");
-            var runName = run.RunName;
-
-            AppendDetailsNote("Loading action-level details from Flow API...");
-
-            WorkAsync(new WorkAsyncInfo
-            {
-                Message = "Loading action details...",
-                Work = (worker, args) =>
-                {
-                    args.Result = _flowApi.GetRunActionsAsync(flowId, runName).GetAwaiter().GetResult();
-                },
-                PostWorkCallBack = args =>
-                {
-                    if (loadVersion != _detailLoadVersion || !ReferenceEquals(_selectedRun, run))
-                    {
-                        return;
-                    }
-
-                    if (args.Error != null)
-                    {
-                        var message = args.Error.Message ?? string.Empty;
-                        AppendDetailsNote("Failed to load action details:\r\n" + message);
-                        return;
-                    }
-
-                    var actions = (IReadOnlyList<FlowActionInfo>)args.Result;
-                    run.Actions = actions;
-                    run.DetailedErrorMessage = FlowManagementApiClient.BuildDetailedErrorSummary(actions);
-                    ShowDetails(run);
-                }
-            });
-        }
-
-        private void AppendDetailsNote(string note)
-        {
-            if (string.IsNullOrEmpty(_txtDetails.Text))
-            {
-                _txtDetails.Text = note;
-                return;
-            }
-
-            _txtDetails.Text = _txtDetails.Text.TrimEnd() + Environment.NewLine + Environment.NewLine + note;
         }
 
         private void LoadRunTree(FlowRunInfo root)
@@ -1065,9 +846,16 @@ namespace PAMonitor.XrmToolBox
             }
 
             var parentRun = e.Node.Tag as FlowRunInfo;
-            if (parentRun == null || _queryService == null)
+            if (parentRun == null)
             {
                 e.Node.Nodes.Clear();
+                return;
+            }
+
+            if (_queryService == null)
+            {
+                e.Node.Nodes.Clear();
+                EnsureConnection(nameof(TvTree_BeforeExpand));
                 return;
             }
 
@@ -1114,7 +902,6 @@ namespace PAMonitor.XrmToolBox
             {
                 _selectedRun = run;
                 ShowDetails(run);
-                LoadActionDetails(run);
             }
         }
 
@@ -1154,8 +941,6 @@ namespace PAMonitor.XrmToolBox
 
         private void ShowDetails(FlowRunInfo run)
         {
-            var detailed = run.DetailedErrorMessage;
-            var dataverseError = run.ErrorMessage;
             var runUrl = EnsureEnvironmentAndBuildUrl(run);
 
             _txtDetails.Text =
@@ -1171,29 +956,21 @@ namespace PAMonitor.XrmToolBox
                 $"IsPrimary:   {run.IsPrimary}{Environment.NewLine}" +
                 $"Error code:  {run.ErrorCode}{Environment.NewLine}" +
                 $"Open run:    {(runUrl ?? "(unavailable — missing environment/flow/run id)")}{Environment.NewLine}" +
-                $"{Environment.NewLine}=== Action-level error (Flow API) ==={Environment.NewLine}" +
-                $"{(string.IsNullOrWhiteSpace(detailed) ? "(not loaded yet or no failed actions)" : detailed)}" +
-                $"{Environment.NewLine}{Environment.NewLine}=== Dataverse errormessage (summary) ==={Environment.NewLine}" +
-                $"{dataverseError}" +
-                FormatActionsSection(run.Actions);
+                $"{Environment.NewLine}=== Error message (Dataverse) ==={Environment.NewLine}" +
+                $"{run.ErrorMessage}";
         }
 
         private string EnsureEnvironmentAndBuildUrl(FlowRunInfo run)
         {
             if (string.IsNullOrWhiteSpace(_environmentId) && Service != null)
             {
-                TryInitializeFlowApi(Service, ConnectionDetail);
-                if (string.IsNullOrWhiteSpace(_environmentId))
+                var ctx = EnvironmentContextResolver.Resolve(
+                    Service,
+                    ConnectionDetail?.EnvironmentId,
+                    ConnectionDetail?.TenantId ?? Guid.Empty);
+                if (ctx != null)
                 {
-                    var ctx = EnvironmentContextResolver.Resolve(
-                        Service,
-                        ConnectionDetail?.EnvironmentId,
-                        ConnectionDetail?.TenantId ?? Guid.Empty);
-                    if (ctx != null)
-                    {
-                        _environmentId = ctx.EnvironmentId;
-                        _tenantId = ctx.TenantId;
-                    }
+                    _environmentId = ctx.EnvironmentId;
                 }
             }
 
@@ -1278,32 +1055,6 @@ namespace PAMonitor.XrmToolBox
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
             }
-        }
-
-        private static string FormatActionsSection(IReadOnlyList<FlowActionInfo> actions)
-        {
-            if (actions == null || actions.Count == 0)
-            {
-                return string.Empty;
-            }
-
-            var lines = new System.Text.StringBuilder();
-            lines.AppendLine();
-            lines.AppendLine();
-            lines.AppendLine("=== Actions ===");
-            foreach (var action in actions)
-            {
-                lines.AppendLine($"- [{action.Status}] {action.Name}" +
-                                 (string.IsNullOrWhiteSpace(action.Code) ? "" : $" ({action.Code})"));
-                if (!string.IsNullOrWhiteSpace(action.ErrorMessage)
-                    && !string.Equals(action.Status, "Succeeded", StringComparison.OrdinalIgnoreCase)
-                    && !string.Equals(action.Status, "Skipped", StringComparison.OrdinalIgnoreCase))
-                {
-                    lines.AppendLine($"    {action.ErrorMessage}");
-                }
-            }
-
-            return lines.ToString();
         }
 
         private static string Truncate(string value, int max)
