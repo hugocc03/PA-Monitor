@@ -2,17 +2,21 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata>
     <id>PAMonitor.XrmToolBox</id>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <title>PA Run Monitor</title>
     <authors>Hugo Calvo Cruz</authors>
     <owners>Hugo Calvo Cruz</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/hugocc03/PA-Monitor</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/hugocc03/PA-Monitor/main/assets/icon-128.png</iconUrl>
     <icon>icon.png</icon>
     <readme>README.md</readme>
     <description>Monitor Power Automate Cloud runs from the Dataverse flowrun table with nested child-flow tree, filters, and error summary.</description>
     <releaseNotes>
+      1.0.2
+      - Add iconUrl for XrmToolBox Tool Library registration (portal requires a public Logo Url)
+
       1.0.1
       - Plugin logos (Small/Big) for XrmToolBox tools list
       - Author metadata: Hugo Calvo Cruz
