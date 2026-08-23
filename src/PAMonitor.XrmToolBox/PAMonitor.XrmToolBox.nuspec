@@ -9,10 +9,15 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/hugocc03/PA-Monitor</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/hugocc03/PA-Monitor/main/assets/icon-128.png</iconUrl>
+    <icon>icon.png</icon>
+    <readme>README.md</readme>
     <description>Monitor Power Automate Cloud runs from the Dataverse flowrun table with nested child-flow tree, filters, and error summary.</description>
     <releaseNotes>
-      Initial release.
+      1.0.1
+      - Plugin logos (Small/Big) for XrmToolBox tools list
+      - Author metadata: Hugo Calvo Cruz
+
+      1.0.0
       - Multi-solution and multi-flow selection with search
       - Run list with status colors and filters
       - Lazy child-flow tree with Expand failures
@@ -23,10 +28,14 @@
     <copyright>Copyright 2026 Hugo Calvo Cruz</copyright>
     <tags>XrmToolBox PowerAutomate Dataverse FlowRun CloudFlow</tags>
     <dependencies>
-      <dependency id="XrmToolBox" version="1.2025.10.74" />
+      <group targetFramework="net48">
+        <dependency id="XrmToolBox" version="1.2025.10.74" />
+      </group>
     </dependencies>
   </metadata>
   <files>
     <file src="bin\Release\PAMonitor.XrmToolBox.dll" target="lib\net48\Plugins" />
+    <file src="..\..\assets\icon-128.png" target="icon.png" />
+    <file src="..\..\README.md" target="README.md" />
   </files>
 </package>

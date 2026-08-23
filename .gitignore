@@ -200,6 +200,7 @@ PublishScripts/
 dist/
 tools/icon-base64.txt
 tools/*.b64
+tools/nuget.exe
 McTools.Xrm.Connection.Settings.xml
 # NuGet Symbol Packages
 *.snupkg
