@@ -197,6 +197,10 @@ PublishScripts/
 
 # NuGet Packages
 *.nupkg
+dist/
+tools/icon-base64.txt
+tools/*.b64
+McTools.Xrm.Connection.Settings.xml
 # NuGet Symbol Packages
 *.snupkg
 # The packages folder can be ignored because of Package Restore
