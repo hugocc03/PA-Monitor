@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata>
     <id>PAMonitor.XrmToolBox</id>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <title>PA Run Monitor</title>
     <authors>Hugo Calvo Cruz</authors>
     <owners>Hugo Calvo Cruz</owners>
@@ -15,6 +15,9 @@
     <readme>README.md</readme>
     <description>Monitor Power Automate Cloud runs from the Dataverse flowrun table with nested child-flow tree, filters, and error summary.</description>
     <releaseNotes>
+      1.0.3
+      - Fix Open run URL: use Dataverse workflowid so the Maker portal opens the correct cloud flow run
+
       1.0.2
       - Fix Tool Library registration: public iconUrl (jsDelivr CDN) required by XrmToolBox portal
       - Keep embedded package icon and README
