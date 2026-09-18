@@ -3,9 +3,6 @@ using System.Drawing.Drawing2D;
 
 namespace PAMonitor.XrmToolBox
 {
-    /// <summary>
-    /// 16×16 toolbar icons drawn in code (no external image assets).
-    /// </summary>
     internal static class ToolbarIcons
     {
         public static Image RefreshSolutions { get; } = Create(DrawRefreshSolutions);
@@ -34,7 +31,6 @@ namespace PAMonitor.XrmToolBox
 
         private static void DrawRefreshSolutions(Graphics g)
         {
-            // Package / solution box
             using (var pen = new Pen(Color.FromArgb(70, 110, 170), 1.2f))
             using (var fill = new SolidBrush(Color.FromArgb(210, 228, 248)))
             {
@@ -50,7 +46,6 @@ namespace PAMonitor.XrmToolBox
 
         private static void DrawRefreshFlows(Graphics g)
         {
-            // Flow nodes connected by lines
             using (var pen = new Pen(Color.FromArgb(20, 130, 120), 1.4f))
             using (var fill = new SolidBrush(Color.FromArgb(20, 130, 120)))
             {
@@ -66,7 +61,6 @@ namespace PAMonitor.XrmToolBox
 
         private static void DrawRefreshRuns(Graphics g)
         {
-            // Play triangle + circular refresh
             using (var fill = new SolidBrush(Color.FromArgb(50, 140, 70)))
             {
                 PointF[] play =
@@ -83,7 +77,6 @@ namespace PAMonitor.XrmToolBox
 
         private static void DrawExpandFailures(Graphics g)
         {
-            // Collapsed tree branch expanding downward
             using (var pen = new Pen(Color.FromArgb(90, 90, 90), 1.3f))
             {
                 g.DrawLine(pen, 3f, 2.5f, 3f, 12.5f);
@@ -94,14 +87,12 @@ namespace PAMonitor.XrmToolBox
 
             using (var fill = new SolidBrush(Color.FromArgb(90, 90, 90)))
             {
-                // Expand chevrons
                 PointF[] c1 = { new PointF(8.5f, 4f), new PointF(11.5f, 5.5f), new PointF(8.5f, 7f) };
                 PointF[] c2 = { new PointF(8.5f, 8f), new PointF(11.5f, 9.5f), new PointF(8.5f, 11f) };
                 g.FillPolygon(fill, c1);
                 g.FillPolygon(fill, c2);
             }
 
-            // Failure mark
             using (var brush = new SolidBrush(Color.FromArgb(190, 45, 45)))
             {
                 g.FillEllipse(brush, 11.5f, 1f, 4f, 4f);
@@ -116,7 +107,6 @@ namespace PAMonitor.XrmToolBox
 
         private static void DrawOpenRun(Graphics g)
         {
-            // Window with external-link arrow
             using (var pen = new Pen(Color.FromArgb(50, 90, 160), 1.3f))
             using (var fill = new SolidBrush(Color.FromArgb(230, 238, 250)))
             {

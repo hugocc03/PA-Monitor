@@ -37,7 +37,6 @@ namespace PAMonitor.XrmToolBox.Services
                 return null;
             }
 
-            // Fill gaps from connection if partially available
             if (string.IsNullOrWhiteSpace(fromOrg.EnvironmentId) && !string.IsNullOrWhiteSpace(connectionEnvironmentId))
             {
                 fromOrg.EnvironmentId = connectionEnvironmentId.Trim();

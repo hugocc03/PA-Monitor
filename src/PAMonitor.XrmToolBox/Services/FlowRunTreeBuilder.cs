@@ -5,10 +5,6 @@ using PAMonitor.XrmToolBox.Models;
 
 namespace PAMonitor.XrmToolBox.Services
 {
-    /// <summary>
-    /// Builds parent/child relationships from flat flowrun rows.
-    /// Children may link via parentrunid and/or callingproductrunid.
-    /// </summary>
     public static class FlowRunTreeBuilder
     {
         public static IReadOnlyList<FlowRunInfo> GetChildren(FlowRunInfo parent, IReadOnlyList<FlowRunInfo> allRuns)

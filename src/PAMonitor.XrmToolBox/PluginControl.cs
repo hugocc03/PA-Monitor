@@ -801,8 +801,7 @@ namespace PAMonitor.XrmToolBox
                 return;
             }
 
-            // Column index 5 = "Open"
-            if (hit.Item.SubItems.IndexOf(hit.SubItem) == 5 && hit.Item.Tag is FlowRunInfo run)
+            if (hit.Item.SubItems.IndexOf(hit.SubItem) == 5 && hit.Item.Tag is FlowRunInfo run) // Open column
             {
                 OpenRunInBrowser(run);
             }

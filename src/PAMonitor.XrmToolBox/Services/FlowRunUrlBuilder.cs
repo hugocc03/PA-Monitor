@@ -5,9 +5,6 @@ namespace PAMonitor.XrmToolBox.Services
 {
     public static class FlowRunUrlBuilder
     {
-        /// <summary>
-        /// https://make.powerautomate.com/environments/{env}/flows/{flowId}/runs/{runName}
-        /// </summary>
         public static string Build(string environmentId, FlowRunInfo run)
         {
             if (string.IsNullOrWhiteSpace(environmentId) || run == null)
