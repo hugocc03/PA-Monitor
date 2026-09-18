@@ -5,11 +5,6 @@ namespace PAMonitor.XrmToolBox.Services
 {
     public static class FlowRunUrlBuilder
     {
-        /// <summary>
-        /// Portal Maker URL for a cloud flow run.
-        /// Uses Dataverse workflowid (xrmWorkflowId), not flowrun.resourceid (runtime / -azshadow).
-        /// https://make.powerautomate.com/environments/{env}/flows/{workflowId}/runs/{runName}
-        /// </summary>
         public static string Build(string environmentId, FlowRunInfo run)
         {
             if (string.IsNullOrWhiteSpace(environmentId) || run == null)

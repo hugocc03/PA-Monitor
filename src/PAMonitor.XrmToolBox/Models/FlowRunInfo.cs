@@ -16,7 +16,7 @@ namespace PAMonitor.XrmToolBox.Models
     public sealed class FlowRunInfo
     {
         public Guid RunId { get; set; }
-        /// <summary>Logic App run id (campo name). Usado para enlazar hijos vía parentrunid.</summary>
+        /// <summary>Logic Apps run name (flowrun.name). Child rows match parentrunid to this value.</summary>
         public string RunName { get; set; }
         public Guid WorkflowId { get; set; }
         public string FlowName { get; set; }
@@ -24,12 +24,12 @@ namespace PAMonitor.XrmToolBox.Models
         public DateTime? StartTime { get; set; }
         public DateTime? EndTime { get; set; }
         public TimeSpan? Duration { get; set; }
-        /// <summary>name del run padre (string), no GUID.</summary>
+        /// <summary>flowrun.parentrunid: parent Logic Apps run name (string), not a GUID.</summary>
         public string ParentRunName { get; set; }
-        /// <summary>Run id del caller (alternativa/complemento a parentrunid).</summary>
+        /// <summary>flowrun.callingproductrunid: also used to match parent/child runs.</summary>
         public string CallingProductRunId { get; set; }
         public string CallingProductResourceId { get; set; }
-        /// <summary>Agrupa todas las ejecuciones de una misma cadena padre→hijos.</summary>
+        /// <summary>When set, groups the whole parent→child run chain.</summary>
         public string ClientTrackingId { get; set; }
         public string ErrorCode { get; set; }
         public string ErrorMessage { get; set; }
@@ -38,7 +38,6 @@ namespace PAMonitor.XrmToolBox.Models
         public string ResourceId { get; set; }
     }
 
-    /// <summary>Nested run tree payload for clipboard JSON export.</summary>
     public sealed class FlowRunTreeJsonNode
     {
         public Guid RunId { get; set; }
@@ -67,7 +66,7 @@ namespace PAMonitor.XrmToolBox.Models
         public DateTime? FromUtc { get; set; }
         public DateTime? ToUtc { get; set; }
         public int Top { get; set; } = 100;
-        /// <summary>Matches flowrunid, Logic Apps run name, and/or workflowid.</summary>
+        /// <summary>Searches flowrunid, run name, and/or workflowid.</summary>
         public string RunIdText { get; set; }
     }
 

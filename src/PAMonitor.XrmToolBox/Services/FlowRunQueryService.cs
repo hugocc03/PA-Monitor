@@ -8,10 +8,9 @@ using PAMonitor.XrmToolBox.Models;
 namespace PAMonitor.XrmToolBox.Services
 {
     /// <summary>
-    /// Consultas contra Dataverse para listar flujos y ejecuciones.
-    /// Esquema flowrun: workflowid/parentrunid son string (no lookup).
-    /// parentrunid apunta al name del run padre (Logic App run id), no al flowrunid GUID.
-    /// Nota: NO usar early-bound (conflicto entre tools de XrmToolBox).
+    /// flowrun.workflowid and parentrunid are strings (not lookups).
+    /// parentrunid stores the parent Logic Apps run name, not flowrunid.
+    /// Do not use early-bound entities (conflicts across XrmToolBox plugins).
     /// </summary>
     public sealed class FlowRunQueryService
     {
@@ -22,9 +21,6 @@ namespace PAMonitor.XrmToolBox.Services
             _service = service ?? throw new ArgumentNullException(nameof(service));
         }
 
-        /// <summary>
-        /// Visible solutions (excludes Default/Active). Used to optionally filter flows.
-        /// </summary>
         public IReadOnlyList<SolutionDefinition> GetSolutions()
         {
             var query = new QueryExpression("solution")
@@ -55,9 +51,6 @@ namespace PAMonitor.XrmToolBox.Services
                 .ToList();
         }
 
-        /// <param name="solutionIds">
-        /// When provided, only flows (component type Workflow = 29) included in any of these solutions.
-        /// </param>
         public IReadOnlyList<FlowDefinition> GetCloudFlows(IEnumerable<Guid> solutionIds = null)
         {
             var query = new QueryExpression("workflow")
@@ -83,8 +76,7 @@ namespace PAMonitor.XrmToolBox.Services
                 var link = query.AddLink("solutioncomponent", "workflowid", "objectid");
                 link.EntityAlias = "sc";
                 link.LinkCriteria.AddCondition("solutionid", ConditionOperator.In, ids);
-                // 29 = Workflow (includes modern cloud flows)
-                link.LinkCriteria.AddCondition("componenttype", ConditionOperator.Equal, 29);
+                link.LinkCriteria.AddCondition("componenttype", ConditionOperator.Equal, 29); // Workflow
             }
 
             var results = _service.RetrieveMultiple(query);
@@ -114,7 +106,6 @@ namespace PAMonitor.XrmToolBox.Services
 
             if (filter.WorkflowIds != null && filter.WorkflowIds.Length > 0)
             {
-                // workflowid es string en flowrun
                 var ids = filter.WorkflowIds.Select(id => (object)id.ToString("D")).ToArray();
                 criteria.AddCondition("workflowid", ConditionOperator.In, ids);
             }
@@ -169,9 +160,6 @@ namespace PAMonitor.XrmToolBox.Services
                 .Replace("_", "[_]");
         }
 
-        /// <summary>
-        /// Hijos vinculados por parentrunid o callingproductrunid (name / flowrunid del padre).
-        /// </summary>
         public IReadOnlyList<FlowRunInfo> GetChildRuns(FlowRunInfo parentRun)
         {
             if (parentRun == null)
@@ -195,9 +183,6 @@ namespace PAMonitor.XrmToolBox.Services
             return SortRuns(RetrieveAll(query).Select(MapRun)).ToList();
         }
 
-        /// <summary>
-        /// Todas las ejecuciones de una misma cadena (raíz + hijos), si clienttrackingid está informado.
-        /// </summary>
         public IReadOnlyList<FlowRunInfo> GetRunsByClientTrackingId(string clientTrackingId)
         {
             if (string.IsNullOrWhiteSpace(clientTrackingId))
@@ -221,9 +206,6 @@ namespace PAMonitor.XrmToolBox.Services
             return SortRuns(RetrieveAll(query).Select(MapRun)).ToList();
         }
 
-        /// <summary>
-        /// Recursively collects the root run and all descendant child runs.
-        /// </summary>
         public IReadOnlyList<FlowRunInfo> CollectTreeRuns(FlowRunInfo root)
         {
             if (root == null)
@@ -429,9 +411,6 @@ namespace PAMonitor.XrmToolBox.Services
             return Guid.TryParse(value, out var id) ? id : (Guid?)null;
         }
 
-        /// <summary>
-        /// Valores documentados: Succeeded / Failed / Cancelled (y variantes Success).
-        /// </summary>
         private static object MapStatusFilter(FlowRunStatus status)
         {
             switch (status)

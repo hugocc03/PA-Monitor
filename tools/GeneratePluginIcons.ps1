@@ -8,14 +8,12 @@ function Draw-PluginIcon([System.Drawing.Graphics]$g, [int]$size) {
 
     $scale = $size / 32.0
 
-    # Monitor frame
     $frame = New-Object System.Drawing.RectangleF (2 * $scale), (3 * $scale), (28 * $scale), (20 * $scale)
     $framePen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(50, 90, 160)), (1.6 * $scale)
     $frameFill = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(220, 235, 252))
     $g.FillRectangle($frameFill, $frame)
     $g.DrawRectangle($framePen, $frame.X, $frame.Y, $frame.Width, $frame.Height)
 
-    # Flow nodes
     $nodeBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(20, 130, 120))
     $nodePen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(20, 130, 120)), (1.4 * $scale)
     $r = 3.5 * $scale
@@ -25,7 +23,6 @@ function Draw-PluginIcon([System.Drawing.Graphics]$g, [int]$size) {
     $g.DrawLine($nodePen, 9 * $scale, 10 * $scale, 18 * $scale, 13 * $scale)
     $g.DrawLine($nodePen, 9 * $scale, 18 * $scale, 18 * $scale, 15 * $scale)
 
-    # Play triangle (run)
     $playBrush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(50, 140, 70))
     $play = @(
         (New-Object System.Drawing.PointF ([double](22 * $scale)), ([double](9 * $scale))),
@@ -34,7 +31,6 @@ function Draw-PluginIcon([System.Drawing.Graphics]$g, [int]$size) {
     )
     $g.FillPolygon($playBrush, $play)
 
-    # Stand
     $standPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(50, 90, 160)), (1.8 * $scale)
     $g.DrawLine($standPen, 16 * $scale, 23 * $scale, 16 * $scale, 27 * $scale)
     $g.DrawLine($standPen, 10 * $scale, 27 * $scale, 22 * $scale, 27 * $scale)

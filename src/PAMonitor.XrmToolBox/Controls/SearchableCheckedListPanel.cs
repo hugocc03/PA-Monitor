@@ -6,9 +6,6 @@ using System.Windows.Forms;
 
 namespace PAMonitor.XrmToolBox.Controls
 {
-    /// <summary>
-    /// Bordered list with Select All, search box, and multi-check selection.
-    /// </summary>
     public sealed class SearchableCheckedListPanel : UserControl
     {
         private readonly GroupBox _group;
