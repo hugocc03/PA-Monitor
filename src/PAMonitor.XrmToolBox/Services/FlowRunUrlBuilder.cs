@@ -6,7 +6,9 @@ namespace PAMonitor.XrmToolBox.Services
     public static class FlowRunUrlBuilder
     {
         /// <summary>
-        /// https://make.powerautomate.com/environments/{env}/flows/{flowId}/runs/{runName}
+        /// Portal Maker URL for a cloud flow run.
+        /// Uses Dataverse workflowid (xrmWorkflowId), not flowrun.resourceid (runtime / -azshadow).
+        /// https://make.powerautomate.com/environments/{env}/flows/{workflowId}/runs/{runName}
         /// </summary>
         public static string Build(string environmentId, FlowRunInfo run)
         {
@@ -15,15 +17,13 @@ namespace PAMonitor.XrmToolBox.Services
                 return null;
             }
 
-            var flowId = !string.IsNullOrWhiteSpace(run.ResourceId)
-                ? run.ResourceId.Trim()
-                : run.WorkflowId == Guid.Empty ? null : run.WorkflowId.ToString("D");
-
-            var runName = run.RunName;
-            if (string.IsNullOrWhiteSpace(flowId) || string.IsNullOrWhiteSpace(runName))
+            if (run.WorkflowId == Guid.Empty || string.IsNullOrWhiteSpace(run.RunName))
             {
                 return null;
             }
+
+            var flowId = run.WorkflowId.ToString("D");
+            var runName = run.RunName.Trim();
 
             return
                 "https://make.powerautomate.com/environments/" +
@@ -31,7 +31,7 @@ namespace PAMonitor.XrmToolBox.Services
                 "/flows/" +
                 Uri.EscapeDataString(flowId) +
                 "/runs/" +
-                Uri.EscapeDataString(runName.Trim());
+                Uri.EscapeDataString(runName);
         }
     }
 }
